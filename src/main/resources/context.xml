@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns:int="http://www.springframework.org/schema/integration"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:int-file="http://www.springframework.org/schema/integration/file"
+             xmlns:int-mongo="http://www.springframework.org/schema/integration/mongodb"
+             xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+  http://www.springframework.org/schema/integration  https://www.springframework.org/schema/integration/spring-integration.xsd
+  http://www.springframework.org/schema/integration/file  https://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+  http://www.springframework.org/schema/integration/mongodb  http://www.springframework.org/schema/integration/mongodb/spring-integration-mongodb.xsd">
+    <int-file:inbound-channel-adapter directory="D:\dev\data" filename-regex="(.*).csv" channel="stringTobseDataTransformerDirectChannel" prevent-duplicates="false">
+        <int:poller fixed-delay="10" time-unit="SECONDS">
+            <int:advice-chain>
+                <int:ref bean="fileMoveAfterAdvice"/>
+            </int:advice-chain>
+        </int:poller>
+    </int-file:inbound-channel-adapter>
+    <int:channel id="stringTobseDataTransformerDirectChannel"></int:channel>
+    <int-file:splitter  input-channel="stringTobseDataTransformerDirectChannel" output-channel="bseDataToDocumentDirectChannel"></int-file:splitter>
+    <int:channel id="bseDataToDocumentDirectChannel"></int:channel>
+    <int:transformer input-channel="bseDataToDocumentDirectChannel"
+                     id="dataToDocumentTransformer"
+                     output-channel="documentToMongoLoadDirectChannel"
+                     ref="dataTransformer"
+                     method="bseEquityDataToDocument">
+    </int:transformer>
+    <int:channel id="documentToMongoLoadDirectChannel"> </int:channel>
+
+    <int:filter expression="!payload.isEmpty()" input-channel="documentToMongoLoadDirectChannel" output-channel="finalDataFiltered"></int:filter>
+
+    <int:channel id="finalDataFiltered"></int:channel>
+    <int-mongo:outbound-channel-adapter id="mongooutboundAdapter"
+                                        mongodb-factory="mongoDbConnectionFactory"
+                                        channel="finalDataFiltered"
+                                        collection-name="BSEEquityData">
+    </int-mongo:outbound-channel-adapter>
+
+
+   <!-- <int:service-activator ref="dataTransformer" method="print" input-channel="finalDataFiltered"></int:service-activator>-->
+    <beans:bean id="mongoDbConnectionFactory" class="org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory">
+        <beans:constructor-arg>
+            <beans:bean class="com.mongodb.client.MongoClients" factory-method="create"/>
+        </beans:constructor-arg>
+        <beans:constructor-arg value="MarketAnalysis"/>
+    </beans:bean>
+
+    <beans:bean id="dataTransformer" class="com.arpit.stock.input.service.DataTransformer"></beans:bean>
+
+    <beans:bean class="com.arpit.stock.input.FileMovePostProcessingAdvice" id="fileMoveAfterAdvice"></beans:bean>
+</beans:beans>

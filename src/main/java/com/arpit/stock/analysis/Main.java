@@ -1,20 +1,29 @@
 package com.arpit.stock.analysis;
 
-import com.arpit.stock.input.service.FileInputHandler;
-import com.arpit.stock.input.service.InputHandler;
+import org.apache.log4j.PropertyConfigurator;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
 
-    InputHandler handler = new FileInputHandler();
+    public void init(){
+        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("context.xml");
 
+        try {
+            TimeUnit.SECONDS.sleep(60);
+//            context.close();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
     public static void main(String[] args) throws IOException {
         Main main = new Main();
-        main.handler.loadInput();
-
+        PropertyConfigurator.configure("D:/dev/Ideaj/StockAnalysisBasic/src/main/resources/log4j.properties");
+        main.init();
     }
 }
